@@ -79,20 +79,37 @@ async def cmd_start(message: types.Message):
     await message.answer("✅ Бот активирован! Я буду присылать вопросы по расписанию.")
 
 @dp.message(Command("quiz"))
+@dp.message(Command("quiz"))
 async def manual_quiz(message: types.Message):
     member = random.choice(TEAM)
     question = random.choice(QUESTIONS)
-    await message.answer(f"🎯 **Вопрос для {member['name']}:**\n\n❓ {question}")
+    
+    # Формируем сообщение. Убедись, что member['tag'] содержит @
+    tag = member['tag']
+    name = member['name']
+    
+    text = f"🎯 **Внеплановая проверка!**\n\n{tag} ({name}), отвечай:\n❓ {question}"
+    
+    # Отправляем с Markdown, чтобы оформить жирный шрифт и тег
+    await message.answer(text, parse_mode="Markdown")
 
 async def send_hourly_quiz():
+    if not TARGET_CHAT_ID:
+        return
+
     member = random.choice(TEAM)
     question = random.choice(QUESTIONS)
-    text = f"⏰ **QA-опрос!**\n\n{member['tag']} ({member['name']}), вопрос:\n❓ *{question}*"
+    
+    tag = member['tag']
+    name = member['name']
+    
+    text = f"⏰ **Ежечасный опрос!**\n\n{tag} ({name}), настало твое время!\n❓ *{question}*"
+    
     try:
+        # Важно: используем bot.send_message для рассылки по таймеру
         await bot.send_message(TARGET_CHAT_ID, text, parse_mode="Markdown")
     except Exception as e:
-        print(f"Ошибка: {e}")
-
+        print(f"Ошибка при автоматической отправке: {e}")
 # --- ЗАГЛУШКА ДЛЯ RENDER ---
 async def handle(request):
     return web.Response(text="Bot is running!")
@@ -117,3 +134,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
