@@ -74,6 +74,15 @@ QUESTIONS = [
     "Какие техники тест-дизайна ты знаешь?",
     "Что такое тестирование удобства пользования?"
 ]
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    await message.answer("✅ Бот активирован! Я буду присылать вопросы по расписанию.")
+
+@dp.message(Command("quiz"))
+async def manual_quiz(message: types.Message):
+    member = random.choice(TEAM)
+    question = random.choice(QUESTIONS)
+    await message.answer(f"🎯 **Вопрос для {member['name']}:**\n\n❓ {question}")
 
 async def send_hourly_quiz():
     member = random.choice(TEAM)
