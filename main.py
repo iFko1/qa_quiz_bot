@@ -20,6 +20,17 @@ TEAM = [
     {"name": "Саша", "tag": "@beyo10"},
     {"name": "Женя", "tag": "@Attila607"}
 ]
+queue_team = []
+
+def get_next_member():
+    global queue_team
+    # Если очередь пуста, копируем всех из TEAM и перемешиваем
+    if not queue_team:
+        queue_team = TEAM.copy()
+        random.shuffle(queue_team)
+    
+    # Забираем последнего человека из перемешанного списка
+    return queue_team.pop()
 # --- БАЗА ИЗ 50+ ВОПРОСОВ ---
 QUESTIONS = [
     "Что такое 'Тестирование черного ящика'?",
@@ -74,42 +85,27 @@ QUESTIONS = [
     "Какие техники тест-дизайна ты знаешь?",
     "Что такое тестирование удобства пользования?"
 ]
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer("✅ Бот активирован! Я буду присылать вопросы по расписанию.")
-
-@dp.message(Command("quiz"))
 @dp.message(Command("quiz"))
 async def manual_quiz(message: types.Message):
-    member = random.choice(TEAM)
+    member = get_next_member() # Теперь берем из очереди
     question = random.choice(QUESTIONS)
     
-    # Формируем сообщение. Убедись, что member['tag'] содержит @
-    tag = member['tag']
-    name = member['name']
-    
-    text = f"🎯 **Внеплановая проверка!**\n\n{tag} ({name}), отвечай:\n❓ {question}"
-    
-    # Отправляем с Markdown, чтобы оформить жирный шрифт и тег
+    text = f"🎯 **Внеплановый опрос!**\n\n{member['tag']} ({member['name']}), твой выход:\n❓ {question}"
     await message.answer(text, parse_mode="Markdown")
 
 async def send_hourly_quiz():
     if not TARGET_CHAT_ID:
         return
 
-    member = random.choice(TEAM)
+    member = get_next_member() # Теперь берем из очереди
     question = random.choice(QUESTIONS)
     
-    tag = member['tag']
-    name = member['name']
-    
-    text = f"⏰ **Ежечасный опрос!**\n\n{tag} ({name}), настало твое время!\n❓ *{question}*"
+    text = f"⏰ **Ежечасный опрос!**\n\n{member['tag']} ({member['name']}), настало твое время!\n❓ *{question}*"
     
     try:
-        # Важно: используем bot.send_message для рассылки по таймеру
         await bot.send_message(TARGET_CHAT_ID, text, parse_mode="Markdown")
     except Exception as e:
-        print(f"Ошибка при автоматической отправке: {e}")
+        print(f"Ошибка отправки: {e}")
 # --- ЗАГЛУШКА ДЛЯ RENDER ---
 async def handle(request):
     return web.Response(text="Bot is running!")
