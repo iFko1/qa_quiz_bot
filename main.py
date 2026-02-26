@@ -1,7 +1,7 @@
 import asyncio
 import random
 import os
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiohttp import web
@@ -20,17 +20,7 @@ TEAM = [
     {"name": "Саша", "tag": "@beyo10"},
     {"name": "Женя", "tag": "@Attila607"}
 ]
-queue_team = []
 
-def get_next_member():
-    global queue_team
-    # Если очередь пуста, копируем всех из TEAM и перемешиваем
-    if not queue_team:
-        queue_team = TEAM.copy()
-        random.shuffle(queue_team)
-    
-    # Забираем последнего человека из перемешанного списка
-    return queue_team.pop()
 # --- БАЗА ИЗ 50+ ВОПРОСОВ ---
 QUESTIONS = [
     "Что такое 'Тестирование черного ящика'?",
@@ -85,10 +75,21 @@ QUESTIONS = [
     "Какие техники тест-дизайна ты знаешь?",
     "Что такое тестирование удобства пользования?"
 ]
+def get_random_member():
+    return random.choice(TEAM)
+
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    await message.answer("✅ Бот активен! Теперь Динар точно в списке.")
+
 @dp.message(Command("quiz"))
 async def manual_quiz(message: types.Message):
-    member = get_next_member() # Теперь берем из очереди
+    # Явно выбираем участника прямо здесь
+    member = get_random_member()
     question = random.choice(QUESTIONS)
+    
+    # Печатаем в лог для отладки (увидишь на Render)
+    print(f"Выбран участник: {member['name']}")
     
     text = f"🎯 **Внеплановый опрос!**\n\n{member['tag']} ({member['name']}), твой выход:\n❓ {question}"
     await message.answer(text, parse_mode="Markdown")
@@ -96,17 +97,17 @@ async def manual_quiz(message: types.Message):
 async def send_hourly_quiz():
     if not TARGET_CHAT_ID:
         return
-
-    member = get_next_member() # Теперь берем из очереди
-    question = random.choice(QUESTIONS)
     
+    member = get_random_member()
+    question = random.choice(QUESTIONS)
     text = f"⏰ **Ежечасный опрос!**\n\n{member['tag']} ({member['name']}), настало твое время!\n❓ *{question}*"
     
     try:
         await bot.send_message(TARGET_CHAT_ID, text, parse_mode="Markdown")
     except Exception as e:
         print(f"Ошибка отправки: {e}")
-# --- ЗАГЛУШКА ДЛЯ RENDER ---
+
+# Заглушка для Render
 async def handle(request):
     return web.Response(text="Bot is running!")
 
@@ -115,14 +116,15 @@ async def run_web_server():
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080)))
+    port = int(os.getenv("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
 
 async def main():
+    # Проверка раз в час
     scheduler.add_job(send_hourly_quiz, "interval", minutes=60)
     scheduler.start()
     
-    # Запускаем веб-сервер и бота одновременно
     await asyncio.gather(
         run_web_server(),
         dp.start_polling(bot)
