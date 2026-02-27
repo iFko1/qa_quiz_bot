@@ -6,8 +6,8 @@ from aiogram.filters import Command
 from aiohttp import web
 
 # --- НАСТРОЙКИ ---
-API_TOKEN = 'ТВОЙ_ТОКЕН'
-TARGET_CHAT_ID = -100XXXXXXXXXX 
+API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8'
+TARGET_CHAT_ID = -1003783490092
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
@@ -114,3 +114,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
