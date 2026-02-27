@@ -3,16 +3,14 @@ import random
 import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiohttp import web
 
 # --- НАСТРОЙКИ ---
-API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8'
-TARGET_CHAT_ID = -1003783490092  # ВСТАВЬ СВОЙ ID ТУТ (числом, без кавычек)
+API_TOKEN = 'ТВОЙ_ТОКЕН'
+TARGET_CHAT_ID = -100XXXXXXXXXX 
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
-scheduler = AsyncIOScheduler()
 
 TEAM = [
     {"name": "Динар", "tag": "@tat_dinero"},
@@ -21,7 +19,7 @@ TEAM = [
     {"name": "Женя", "tag": "@Attila607"}
 ]
 
-# --- БАЗА ИЗ 50+ ВОПРОСОВ ---
+# 100+ вопросов (список сокращен для наглядности, вставь свои или используй эти)
 QUESTIONS = [
     "Что такое 'Тестирование черного ящика'?",
     "В чем разница между Smoke и Sanity тестированием?",
@@ -73,63 +71,46 @@ QUESTIONS = [
     "Что такое API?",
     "Что такое документация в тестировании?",
     "Какие техники тест-дизайна ты знаешь?",
+    "Что такое функциональное тестирование?", "В чем суть регрессионного тестирования?",
+    "Что такое граничные значения?", "Что такое Smoke-тестирование?",
+    "Как выглядит жизненный цикл бага?", "Что такое класс эквивалентности?",
+    "Разница между багом и дефектом?", "Что такое тест-кейс?",
+    "Что такое чек-лист?", "Для чего нужны лог-файлы?",
     "Что такое тестирование удобства пользования?"
+    "СОСАЛ?"
+    "Масса солнца?"
 ]
-def get_random_member():
-    return random.choice(TEAM)
 
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer("✅ Бот активен! Теперь Динар точно в списке.")
 
 @dp.message(Command("quiz"))
-async def manual_quiz(message: types.Message):
-    # Явно выбираем участника прямо здесь
-    member = get_random_member()
+async def quiz_handler(message: types.Message):
+    # Обычный рандом для всех
+    member = random.choice(TEAM)
     question = random.choice(QUESTIONS)
-    
-    # Печатаем в лог для отладки (увидишь на Render)
-    print(f"Выбран участник: {member['name']}")
-    
-    text = f"🎯 **Внеплановый опрос!**\n\n{member['tag']} ({member['name']}), твой выход:\n❓ {question}"
+    text = f"🎯 **Опрос для {member['name']}!**\n\n{member['tag']}\n❓ {question}"
     await message.answer(text, parse_mode="Markdown")
 
-async def send_hourly_quiz():
-    if not TARGET_CHAT_ID:
-        return
-    
-    member = get_random_member()
+@dp.message(Command("dinar"))
+async def dinar_quiz(message: types.Message):
+    # ПРИНУДИТЕЛЬНЫЙ ВЫБОР ДИНАРА
+    member = {"name": "Динар", "tag": "@tat_dinero"} 
     question = random.choice(QUESTIONS)
-    text = f"⏰ **Ежечасный опрос!**\n\n{member['tag']} ({member['name']}), настало твое время!\n❓ *{question}*"
-    
-    try:
-        await bot.send_message(TARGET_CHAT_ID, text, parse_mode="Markdown")
-    except Exception as e:
-        print(f"Ошибка отправки: {e}")
-
+    text = f"🎯 **Специальный вопрос для Динара!**\n\n{member['tag']}\n❓ {question}"
+    await message.answer(text, parse_mode="Markdown")
 # Заглушка для Render
 async def handle(request):
     return web.Response(text="Bot is running!")
 
-async def run_web_server():
+async def start_server():
     app = web.Application()
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
     await runner.setup()
-    port = int(os.getenv("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
+    site = web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080)))
     await site.start()
 
 async def main():
-    # Проверка раз в час
-    scheduler.add_job(send_hourly_quiz, "interval", minutes=60)
-    scheduler.start()
-    
-    await asyncio.gather(
-        run_web_server(),
-        dp.start_polling(bot)
-    )
+    await asyncio.gather(start_server(), dp.start_polling(bot))
 
 if __name__ == "__main__":
     asyncio.run(main())
-
