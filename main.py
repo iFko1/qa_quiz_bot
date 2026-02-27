@@ -82,21 +82,22 @@ QUESTIONS = [
 ]
 
 
+# Команда /quiz (рандом)
 @dp.message(Command("quiz"))
 async def quiz_handler(message: types.Message):
-    # Обычный рандом для всех
     member = random.choice(TEAM)
     question = random.choice(QUESTIONS)
-    text = f"🎯 **Опрос для {member['name']}!**\n\n{member['tag']}\n❓ {question}"
-    await message.answer(text, parse_mode="Markdown")
+    # Используем HTML, чтобы ники с подчеркиванием не ломали бота
+    text = f"🎯 <b>Опрос для {member['name']}!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
+    await message.answer(text, parse_mode="HTML")
 
+# Команда /dinar (принудительно)
 @dp.message(Command("dinar"))
-async def dinar_quiz(message: types.Message):
-    # ПРИНУДИТЕЛЬНЫЙ ВЫБОР ДИНАРА
-    member = {"name": "Динар", "tag": "@tat_dinero"} 
+async def dinar_handler(message: types.Message):
+    member = {"name": "Динар", "tag": "@tat_dinero"}
     question = random.choice(QUESTIONS)
-    text = f"🎯 **Специальный вопрос для Динара!**\n\n{member['tag']}\n❓ {question}"
-    await message.answer(text, parse_mode="Markdown")
+    text = f"🎯 <b>Специальный вопрос для Динара!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
+    await message.answer(text, parse_mode="HTML")
 # Заглушка для Render
 async def handle(request):
     return web.Response(text="Bot is running!")
@@ -109,9 +110,24 @@ async def start_server():
     site = web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080)))
     await site.start()
 
+async def send_hourly_quiz():
+    if not TARGET_CHAT_ID:
+        return
+    member = random.choice(TEAM)
+    question = random.choice(QUESTIONS)
+    text = f"⏰ <b>Ежечасный опрос!</b>\n\n{member['tag']} ({member['name']}), твой вопрос:\n❓ <i>{question}</i>"
+    try:
+        await bot.send_message(TARGET_CHAT_ID, text, parse_mode="HTML")
+    except Exception as e:
+        print(f"Ошибка автоматической отправки: {e}")
+
+# 3. В самом конце файла - запуск планировщика
 async def main():
+    scheduler.add_job(send_hourly_quiz, "interval", minutes=60) # Вот тут запускается расписание
+    scheduler.start()
     await asyncio.gather(start_server(), dp.start_polling(bot))
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
