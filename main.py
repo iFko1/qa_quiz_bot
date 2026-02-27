@@ -4,13 +4,15 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiohttp import web
+from apscheduler.schedulers.asyncio import AsyncIOScheduler # Добавили импорт
 
 # --- НАСТРОЙКИ ---
-API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8'
+API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8' # ВАЖНО: смени токен после запуска!
 TARGET_CHAT_ID = -1003783490092
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
+scheduler = AsyncIOScheduler() # Создали объект планировщика
 
 TEAM = [
     {"name": "Динар", "tag": "@tat_dinero"},
@@ -19,7 +21,6 @@ TEAM = [
     {"name": "Женя", "tag": "@Attila607"}
 ]
 
-# 100+ вопросов (список сокращен для наглядности, вставь свои или используй эти)
 QUESTIONS = [
     "Что такое 'Тестирование черного ящика'?",
     "В чем разница между Smoke и Sanity тестированием?",
@@ -47,7 +48,7 @@ QUESTIONS = [
     "Назови методы HTTP запросов.",
     "Что такое SQL и зачем он тестировщику?",
     "Что такое JSON?",
-    "Как протестировать поле ввода имени?",
+    "Как протестируешь поле ввода имени?",
     "Что такое жизненный цикл ПО (SDLC)?",
     "Чем отличается мобильное тестирование от веба?",
     "Что такое эмулятор?",
@@ -71,34 +72,26 @@ QUESTIONS = [
     "Что такое API?",
     "Что такое документация в тестировании?",
     "Какие техники тест-дизайна ты знаешь?",
-    "Что такое функциональное тестирование?", "В чем суть регрессионного тестирования?",
-    "Что такое граничные значения?", "Что такое Smoke-тестирование?",
-    "Как выглядит жизненный цикл бага?", "Что такое класс эквивалентности?",
-    "Разница между багом и дефектом?", "Что такое тест-кейс?",
-    "Что такое чек-лист?", "Для чего нужны лог-файлы?",
-    "Что такое тестирование удобства пользования?"
-    "СОСАЛ?"
-    "Масса солнца?"
+    "Сосал?",
+    "Что такое тестирование удобства пользования?",
+    "Кто такой QA?",
+    "Что такое Regression testing?"
 ]
 
-
-# Команда /quiz (рандом)
 @dp.message(Command("quiz"))
 async def quiz_handler(message: types.Message):
     member = random.choice(TEAM)
     question = random.choice(QUESTIONS)
-    # Используем HTML, чтобы ники с подчеркиванием не ломали бота
     text = f"🎯 <b>Опрос для {member['name']}!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
     await message.answer(text, parse_mode="HTML")
 
-# Команда /dinar (принудительно)
 @dp.message(Command("dinar"))
 async def dinar_handler(message: types.Message):
     member = {"name": "Динар", "tag": "@tat_dinero"}
     question = random.choice(QUESTIONS)
     text = f"🎯 <b>Специальный вопрос для Динара!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
     await message.answer(text, parse_mode="HTML")
-# Заглушка для Render
+
 async def handle(request):
     return web.Response(text="Bot is running!")
 
@@ -111,8 +104,6 @@ async def start_server():
     await site.start()
 
 async def send_hourly_quiz():
-    if not TARGET_CHAT_ID:
-        return
     member = random.choice(TEAM)
     question = random.choice(QUESTIONS)
     text = f"⏰ <b>Ежечасный опрос!</b>\n\n{member['tag']} ({member['name']}), твой вопрос:\n❓ <i>{question}</i>"
@@ -121,13 +112,10 @@ async def send_hourly_quiz():
     except Exception as e:
         print(f"Ошибка автоматической отправки: {e}")
 
-# 3. В самом конце файла - запуск планировщика
 async def main():
-    scheduler.add_job(send_hourly_quiz, "interval", minutes=60) # Вот тут запускается расписание
+    scheduler.add_job(send_hourly_quiz, "interval", minutes=60)
     scheduler.start()
     await asyncio.gather(start_server(), dp.start_polling(bot))
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
