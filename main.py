@@ -84,19 +84,26 @@ QUESTIONS = [
     "Как выстраивать коммуникацию с разработчиком, который не считает нужным тестировать свой код перед передачей вам?"
 ]
 
-# Команда /quest (Спросить ИИ)
+def get_ai_response(prompt_text):
+    genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+    model = genai.GenerativeModel('gemini-2.0-flash')
+    response = model.generate_content(prompt_text)
+
 @dp.message(Command("quest"))
 async def ai_quest_handler(message: types.Message, command: CommandObject):
     if not command.args:
-        return await message.reply("Напиши вопрос, например: <code>/quest что такое API?</code>", parse_mode="HTML")
+        return await message.reply("Напиши вопрос после команды.")
     
-    msg = await message.answer("🤖 Думаю...")
+    msg = await message.answer("🤖 Секунду...")
     try:
-        response = ai_model.generate_content(f"Ты эксперт по QA. Кратко ответь: {command.args}")
-        await msg.edit_text(f"<b>Ответ ИИ:</b>\n\n{response.text}", parse_mode="HTML")
+        # Прямой вызов с получением ключа в момент запроса
+        answer = get_ai_response(command.args)
+        await msg.edit_text(f"<b>Ответ ИИ:</b>\n\n{answer}", parse_mode="HTML")
     except Exception as e:
-        print(f"Ошибка ИИ: {e}")
-        await msg.edit_text("Не удалось связаться с ИИ. Проверь GEMINI_API_KEY.")
+        print(f"Full Error: {e}") # Это уйдет в логи Render
+        await msg.edit_text(f"Ошибка: {e}")
+
+
 
 # Проверка ответа (Reply)
 @dp.message(lambda message: message.reply_to_message and "❓" in message.reply_to_message.text)
@@ -138,6 +145,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
