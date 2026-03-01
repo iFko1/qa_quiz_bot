@@ -15,7 +15,7 @@ TARGET_CHAT_ID = -1003783490092
 # Настройка ИИ (Gemini 2.0 Flash)
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
-ai_model = genai.GenerativeModel('gemini-2.0-flash')
+ai_model = genai.GenerativeModel('gemini-1.5-flash')
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
@@ -145,6 +145,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
