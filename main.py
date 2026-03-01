@@ -6,16 +6,16 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, CommandObject
 from aiohttp import web
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from openai import AsyncOpenAI
 
 # --- НАСТРОЙКИ (БЕРЕМ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ) ---
 API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 TARGET_CHAT_ID = -1003783490092
 
-# Настройка ИИ (Gemini 2.0 Flash)
-if GEMINI_KEY:
-    genai.configure(api_key=GEMINI_KEY)
-ai_model = genai.GenerativeModel('gemini-1.5-flash')
+client = AsyncOpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"), 
+    base_url="https://api.deepseek.com"
 
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
@@ -84,24 +84,28 @@ QUESTIONS = [
     "Как выстраивать коммуникацию с разработчиком, который не считает нужным тестировать свой код перед передачей вам?"
 ]
 
-def get_ai_response(prompt_text):
-    genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-    model = genai.GenerativeModel('gemini-2.0-flash')
-    response = model.generate_content(prompt_text)
+async def get_ai_response(prompt_text):
+    response = await client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": "Ты эксперт по QA (тестированию ПО). Отвечай кратко и профессионально."},
+            {"role": "user", "content": prompt_text},
+        ],
+        stream=False
+    )
+    return response.choices[0].message.content
 
 @dp.message(Command("quest"))
 async def ai_quest_handler(message: types.Message, command: CommandObject):
     if not command.args:
-        return await message.reply("Напиши вопрос после команды.")
+        return await message.reply("Напиши вопрос, например: /quest что такое баг?")
     
-    msg = await message.answer("🤖 Секунду...")
+    msg = await message.answer("🤖 DeepSeek думает...")
     try:
-        # Прямой вызов с получением ключа в момент запроса
-        answer = get_ai_response(command.args)
+        answer = await get_ai_response(command.args)
         await msg.edit_text(f"<b>Ответ ИИ:</b>\n\n{answer}", parse_mode="HTML")
     except Exception as e:
-        print(f"Full Error: {e}") # Это уйдет в логи Render
-        await msg.edit_text(f"Ошибка: {e}")
+        await msg.edit_text(f"Ошибка DeepSeek: {e}")
 
 
 
@@ -145,6 +149,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
