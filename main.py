@@ -13,8 +13,8 @@ GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 TARGET_CHAT_ID = -1003783490092
 
 client = AsyncOpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"), 
-    base_url="https://api.deepseek.com"
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
 )
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
@@ -85,12 +85,11 @@ QUESTIONS = [
 
 async def get_ai_response(prompt_text):
     response = await client.chat.completions.create(
-        model="deepseek-chat",
+        model="llama-3.3-70b-versatile", # Очень мощная модель
         messages=[
-            {"role": "system", "content": "Ты эксперт по QA (тестированию ПО). Отвечай кратко и профессионально."},
+            {"role": "system", "content": "Ты эксперт по QA. Отвечай кратко."},
             {"role": "user", "content": prompt_text},
-        ],
-        stream=False
+        ]
     )
     return response.choices[0].message.content
 
@@ -99,7 +98,7 @@ async def ai_quest_handler(message: types.Message, command: CommandObject):
     if not command.args:
         return await message.reply("Напиши вопрос, например: /quest что такое баг?")
     
-    msg = await message.answer("🤖 DeepSeek думает...")
+    msg = await message.answer("🤖 Как вы заебали со своими вопросами...")
     try:
         answer = await get_ai_response(command.args)
         await msg.edit_text(f"<b>Ответ ИИ:</b>\n\n{answer}", parse_mode="HTML")
@@ -148,6 +147,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
