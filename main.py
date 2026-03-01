@@ -1,7 +1,6 @@
 import asyncio
 import random
 import os
-import google.generativeai as genai
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, CommandObject
 from aiohttp import web
@@ -149,6 +148,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
