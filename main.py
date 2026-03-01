@@ -1,14 +1,19 @@
 import asyncio
 import random
 import os
+import google.generativeai as genai
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiohttp import web
-from apscheduler.schedulers.asyncio import AsyncIOScheduler # Добавили импорт
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # --- НАСТРОЙКИ ---
-API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8' # ВАЖНО: смени токен после запуска!
+API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8'
 TARGET_CHAT_ID = -1003783490092
+GEMINI_KEY = 'AIzaSyAQX2EOPkbwh0bHKxSQc-40da4G-0xWfpI'
+
+genai.configure(api_key=GEMINI_KEY)
+ai_model = genai.GenerativeModel('gemini-1.5-flash')
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
@@ -78,6 +83,42 @@ QUESTIONS = [
     "Как выстраивать коммуникацию с разработчиком, который не считает нужным тестировать свой код перед передачей вам?"
 ]
 
+@dp.message(Command("quest"))
+async def ai_quest_handler(message: types.Message, command: CommandObject):
+    if not command.args:
+        return await message.reply("Напиши вопрос после команды, например: <code>/quest что такое API?</code>", parse_mode="HTML")
+    
+    msg = await message.answer("🤖 Ищу ответ в своих нейронных связях...")
+    
+    prompt = f"Ты эксперт по тестированию ПО. Кратко и понятно ответь на вопрос: {command.args}"
+    
+    try:
+        response = ai_model.generate_content(prompt)
+        await msg.edit_text(f"<b>Ответ ИИ:</b>\n\n{response.text}", parse_mode="HTML")
+    except Exception as e:
+        await msg.edit_text("Не удалось связаться с ИИ. Попробуй позже.")
+        
+@dp.message(Command("quiz"))
+async def quiz_handler(message: types.Message):
+    member = random.choice(TEAM)
+    question = random.choice(QUESTIONS)
+    text = f"🎯 <b>Опрос для {member['name']}!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
+    await message.answer(text, parse_mode="HTML")
+
+@dp.message(lambda message: message.reply_to_message and ("❓" in message.reply_to_message.text or "🎯" in message.reply_to_message.text))
+async def check_answer(message: types.Message):
+    question_text = message.reply_to_message.text
+    user_answer = message.text
+    
+    prompt = f"Вопрос по QA: {question_text}. Ученик ответил: {user_answer}. Оцени ответ по 10-балльной шкале, кратко поправь ошибки и дай правильный лаконичный ответ."
+    
+    try:
+        response = ai_model.generate_content(prompt)
+        await message.reply(f"🤖 <b>Анализ ответа:</b>\n\n{response.text}", parse_mode="HTML")
+    except Exception:
+        pass # Игнорируем ошибки ИИ здесь
+
+# 3. СТАРЫЕ КОМАНДЫ (Quiz, Dinar)
 @dp.message(Command("quiz"))
 async def quiz_handler(message: types.Message):
     member = random.choice(TEAM)
@@ -87,13 +128,20 @@ async def quiz_handler(message: types.Message):
 
 @dp.message(Command("dinar"))
 async def dinar_handler(message: types.Message):
-    member = {"name": "Динар", "tag": "@tat_dinero"}
     question = random.choice(QUESTIONS)
-    text = f"🎯 <b>Специальный вопрос для Динара!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
+    text = f"🎯 <b>Специально для Динара!</b>\n\n@tat_dinero\n❓ <i>{question}</i>"
     await message.answer(text, parse_mode="HTML")
 
-async def handle(request):
-    return web.Response(text="Bot is running!")
+# --- СЛУЖЕБНЫЕ ФУНКЦИИ ---
+async def send_hourly_quiz():
+    member = random.choice(TEAM)
+    question = random.choice(QUESTIONS)
+    text = f"⏰ <b>Ежечасный опрос!</b>\n\n{member['tag']} ({member['name']})\n❓ <i>{question}</i>"
+    try:
+        await bot.send_message(TARGET_CHAT_ID, text, parse_mode="HTML")
+    except: pass
+
+async def handle(request): return web.Response(text="Live")
 
 async def start_server():
     app = web.Application()
@@ -102,15 +150,6 @@ async def start_server():
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080)))
     await site.start()
-
-async def send_hourly_quiz():
-    member = random.choice(TEAM)
-    question = random.choice(QUESTIONS)
-    text = f"⏰ <b>Ежечасный опрос!</b>\n\n{member['tag']} ({member['name']}), твой вопрос:\n❓ <i>{question}</i>"
-    try:
-        await bot.send_message(TARGET_CHAT_ID, text, parse_mode="HTML")
-    except Exception as e:
-        print(f"Ошибка автоматической отправки: {e}")
 
 async def main():
     scheduler.add_job(send_hourly_quiz, "interval", minutes=60)
