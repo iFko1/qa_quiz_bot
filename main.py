@@ -8,20 +8,18 @@ from aiohttp import web
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # --- НАСТРОЙКИ (БЕРЕМ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ) ---
-API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') # Бот сам возьмет это из настроек Render
-GEMINI_KEY = os.getenv('GEMINI_API_KEY')     # И это тоже
+API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+GEMINI_KEY = os.getenv('GEMINI_API_KEY')
 TARGET_CHAT_ID = -1003783490092
 
-# Проверка, что ключи загружены (для отладки в логах)
-if not API_TOKEN or not GEMINI_KEY:
-    print("ОШИБКА: Ключи API не найдены в переменных окружения!")
+# Настройка ИИ (Gemini 2.0 Flash)
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
+ai_model = genai.GenerativeModel('gemini-2.0-flash')
 
-genai.configure(api_key=GEMINI_KEY)
-ai_model = genai.GenerativeModel('gemini-1.5-flash')
-
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
-scheduler = AsyncIOScheduler() # Создали объект планировщика
+scheduler = AsyncIOScheduler()
 
 TEAM = [
     {"name": "Динар", "tag": "@tat_dinero"},
@@ -29,7 +27,6 @@ TEAM = [
     {"name": "Саша", "tag": "@beyo10"},
     {"name": "Женя", "tag": "@Attila607"}
 ]
-
 QUESTIONS = [
     "Чем тестирование (testing) отличается от обеспечения качества (QA) и контроля качества (QC)?",
     "Назовите семь принципов тестирования. Раскройте один из них (например, «Парадокс пестицида» или «Исчерпывающее тестирование невозможно»)",
@@ -87,81 +84,61 @@ QUESTIONS = [
     "Как выстраивать коммуникацию с разработчиком, который не считает нужным тестировать свой код перед передачей вам?"
 ]
 
+# Команда /quest (Спросить ИИ)
 @dp.message(Command("quest"))
 async def ai_quest_handler(message: types.Message, command: CommandObject):
     if not command.args:
-        return await message.reply("Напиши вопрос после команды, например: <code>/quest что такое API?</code>", parse_mode="HTML")
+        return await message.reply("Напиши вопрос, например: <code>/quest что такое API?</code>", parse_mode="HTML")
     
-    msg = await message.answer("🤖 Ищу ответ в своих нейронных связях...")
-    
-    prompt = f"Ты эксперт по тестированию ПО. Кратко и понятно ответь на вопрос: {command.args}"
-    
+    msg = await message.answer("🤖 Думаю...")
     try:
-        response = ai_model.generate_content(prompt)
+        response = ai_model.generate_content(f"Ты эксперт по QA. Кратко ответь: {command.args}")
         await msg.edit_text(f"<b>Ответ ИИ:</b>\n\n{response.text}", parse_mode="HTML")
     except Exception as e:
-        await msg.edit_text("Не удалось связаться с ИИ. Попробуй позже.")
-        
-@dp.message(Command("quiz"))
-async def quiz_handler(message: types.Message):
-    member = random.choice(TEAM)
-    question = random.choice(QUESTIONS)
-    text = f"🎯 <b>Опрос для {member['name']}!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
-    await message.answer(text, parse_mode="HTML")
+        print(f"Ошибка ИИ: {e}")
+        await msg.edit_text("Не удалось связаться с ИИ. Проверь GEMINI_API_KEY.")
 
-@dp.message(lambda message: message.reply_to_message and ("❓" in message.reply_to_message.text or "🎯" in message.reply_to_message.text))
+# Проверка ответа (Reply)
+@dp.message(lambda message: message.reply_to_message and "❓" in message.reply_to_message.text)
 async def check_answer(message: types.Message):
-    question_text = message.reply_to_message.text
-    user_answer = message.text
-    
-    prompt = f"Вопрос по QA: {question_text}. Ученик ответил: {user_answer}. Оцени ответ по 10-балльной шкале, кратко поправь ошибки и дай правильный лаконичный ответ."
-    
     try:
-        response = ai_model.generate_content(prompt)
-        await message.reply(f"🤖 <b>Анализ ответа:</b>\n\n{response.text}", parse_mode="HTML")
-    except Exception:
-        pass # Игнорируем ошибки ИИ здесь
+        response = ai_model.generate_content(f"Вопрос: {message.reply_to_message.text}. Ответ: {message.text}. Оцени кратко.")
+        await message.reply(f"🤖 <b>Вердикт:</b>\n{response.text}", parse_mode="HTML")
+    except: pass
 
-# 3. СТАРЫЕ КОМАНДЫ (Quiz, Dinar)
+# Команды /quiz и /dinar
 @dp.message(Command("quiz"))
 async def quiz_handler(message: types.Message):
-    member = random.choice(TEAM)
-    question = random.choice(QUESTIONS)
-    text = f"🎯 <b>Опрос для {member['name']}!</b>\n\n{member['tag']}\n❓ <i>{question}</i>"
-    await message.answer(text, parse_mode="HTML")
+    m = random.choice(TEAM)
+    q = random.choice(QUESTIONS)
+    await message.answer(f"🎯 <b>Опрос для {m['name']}!</b>\n\n{m['tag']}\n❓ <i>{q}</i>", parse_mode="HTML")
 
 @dp.message(Command("dinar"))
 async def dinar_handler(message: types.Message):
-    question = random.choice(QUESTIONS)
-    text = f"🎯 <b>Специально для Динара!</b>\n\n@tat_dinero\n❓ <i>{question}</i>"
-    await message.answer(text, parse_mode="HTML")
+    q = random.choice(QUESTIONS)
+    await message.answer(f"🎯 <b>Специально для Динара!</b>\n\n@tat_dinero\n❓ <i>{q}</i>", parse_mode="HTML")
 
-# --- СЛУЖЕБНЫЕ ФУНКЦИИ ---
 async def send_hourly_quiz():
-    member = random.choice(TEAM)
-    question = random.choice(QUESTIONS)
-    text = f"⏰ <b>Ежечасный опрос!</b>\n\n{member['tag']} ({member['name']})\n❓ <i>{question}</i>"
-    try:
-        await bot.send_message(TARGET_CHAT_ID, text, parse_mode="HTML")
+    m = random.choice(TEAM)
+    q = random.choice(QUESTIONS)
+    try: await bot.send_message(TARGET_CHAT_ID, f"⏰ <b>Ежечасный опрос!</b>\n\n{m['tag']}\n❓ <i>{q}</i>", parse_mode="HTML")
     except: pass
 
-async def handle(request): return web.Response(text="Live")
-
-async def start_server():
-    app = web.Application()
-    app.router.add_get('/', handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080)))
-    await site.start()
+async def handle(request): return web.Response(text="Bot Live")
 
 async def main():
     scheduler.add_job(send_hourly_quiz, "interval", minutes=60)
     scheduler.start()
-    await asyncio.gather(start_server(), dp.start_polling(bot))
+    app = web.Application()
+    app.router.add_get('/', handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080))).start()
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
