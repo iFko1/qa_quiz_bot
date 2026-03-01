@@ -93,6 +93,31 @@ async def get_ai_response(prompt_text):
     )
     return response.choices[0].message.content
 
+@dp.message(lambda message: message.reply_to_message and "❓" in message.reply_to_message.text)
+async def check_answer_handler(message: types.Message):
+    # Берем текст вопроса из оригинального сообщения бота
+    question_text = message.reply_to_message.text
+    # Берем то, что написал пользователь
+    user_answer = message.text
+    
+    # Формируем инструкцию для Groq
+    prompt = f"""
+    Ты — строгий, но справедливый экзаменатор по QA.
+    Вопрос: {question_text}
+    Ответ ученика: {user_answer}
+    
+    Оцени ответ по 10-балльной шкале. 
+    Если есть ошибки — исправь. Если ответ неполный — дополни. 
+    Пиши кратко, по делу и профессионально.
+    """
+    
+    try:
+        # Вызываем ту же функцию, что и в /quest
+        ai_feedback = await get_ai_response(prompt)
+        await message.reply(f"🤖 <b>Анализ твоего ответа:</b>\n\n{ai_feedback}", parse_mode="HTML")
+    except Exception as e:
+        print(f"Ошибка проверки: {e}")
+
 @dp.message(Command("quest"))
 async def ai_quest_handler(message: types.Message, command: CommandObject):
     if not command.args:
@@ -147,6 +172,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
