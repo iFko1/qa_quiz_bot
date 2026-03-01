@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # --- НАСТРОЙКИ ---
 API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8'
 TARGET_CHAT_ID = -1003783490092
-GEMINI_KEY = 'AIzaSyAQX2EOPkbwh0bHKxSQc-40da4G-0xWfpI'
+GEMINI_KEY = ''
 
 genai.configure(api_key=GEMINI_KEY)
 ai_model = genai.GenerativeModel('gemini-1.5-flash')
@@ -158,4 +158,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
