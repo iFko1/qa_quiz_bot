@@ -16,7 +16,7 @@ TARGET_CHAT_ID = -1003783490092
 client = AsyncOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"), 
     base_url="https://api.deepseek.com"
-
+)
 bot = Bot(token=API_TOKEN) if API_TOKEN else None
 dp = Dispatcher()
 scheduler = AsyncIOScheduler()
@@ -149,6 +149,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
