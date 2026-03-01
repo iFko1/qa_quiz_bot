@@ -7,10 +7,14 @@ from aiogram.filters import Command, CommandObject
 from aiohttp import web
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# --- НАСТРОЙКИ ---
-API_TOKEN = '8785404334:AAG97F8RrwtymAeMvnPpY0QVR1LzMEwknp8'
+# --- НАСТРОЙКИ (БЕРЕМ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ) ---
+API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') # Бот сам возьмет это из настроек Render
+GEMINI_KEY = os.getenv('GEMINI_API_KEY')     # И это тоже
 TARGET_CHAT_ID = -1003783490092
-GEMINI_KEY = ''
+
+# Проверка, что ключи загружены (для отладки в логах)
+if not API_TOKEN or not GEMINI_KEY:
+    print("ОШИБКА: Ключи API не найдены в переменных окружения!")
 
 genai.configure(api_key=GEMINI_KEY)
 ai_model = genai.GenerativeModel('gemini-1.5-flash')
@@ -158,5 +162,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
