@@ -100,7 +100,7 @@ async def check_answer_handler(message: types.Message):
     # Берем то, что написал пользователь
     user_answer = message.text
     
-prompt = f"""
+    prompt = f"""
     Ты — Senior QA Automation Engineer с 10 годами опыта, любишь айтишный сленг и честную обратную связь.
     Вопрос, который ты задал: {question_text}
     Ответ, который прилетел от юзера: {user_answer}
@@ -177,6 +177,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
 
